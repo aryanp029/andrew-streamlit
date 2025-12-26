@@ -123,7 +123,7 @@ if run_btn:
 
     st.success("✅ Cutout ready!")
 
-    st.image(result_img, caption=f"Model: {output.get('model_used')}", use_container_width=True)
+    st.image(result_img, caption=f"Model: {output.get('model_used')}")
 
     st.download_button(
         "⬇️ Download PNG",
