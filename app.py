@@ -32,7 +32,7 @@ HEADERS = {
 st.set_page_config(page_title="RunPod Pin Cutout", layout="centered")
 
 st.title("📌 RunPod Pin Cutout")
-st.caption("YOLO → BiRefNet / SAM3 → PNG Cutout")
+st.caption("YOLO → BiRefNet → PNG Cutout")
 
 # -----------------------------
 # UI
@@ -42,10 +42,7 @@ uploaded_file = st.file_uploader(
     type=["png", "jpg", "jpeg", "webp"]
 )
 
-model = st.selectbox(
-    "Segmentation model",
-    ["birefnet", "sam3"]
-)
+model = "birefnet"
 
 enhance = st.checkbox("Enhance output", value=True)
 
