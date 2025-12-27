@@ -51,7 +51,7 @@ run_btn = st.button("🚀 Run Cutout", disabled=uploaded_file is None)
 # -----------------------------
 # RUN
 # -----------------------------
-if run_btn:
+if run_btn and uploaded_file is not None:
     with st.spinner("Encoding image..."):
         image_bytes = uploaded_file.read()
         image_b64 = base64.b64encode(image_bytes).decode()
