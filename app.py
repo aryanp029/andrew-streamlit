@@ -151,7 +151,6 @@ if search_btn and uploaded_file is not None:
                     for idx, item in enumerate(debug_data[:3], 1):
                         pin_id = item.get('pin_id')
                         similarity = item.get('similarity', 0)
-                        pin_link = f"http://34.58.76.140:8000/pin/{pin_id}"
                         
                         with st.expander(f"Pin ID: {pin_id} - Similarity: {similarity:.4f}"):
                             col1, col2 = st.columns(2)
@@ -160,11 +159,9 @@ if search_btn and uploaded_file is not None:
                             with col2:
                                 st.metric("Distance", f"{item.get('distance', 0):.4f}")
                             
-                            # Show image link if available, otherwise show regular link
+                            # Show image link only if available
                             if item.get("image_link"):
                                 st.markdown(f"🔗 **Image Link:** [{item.get('image_link')}]({item.get('image_link')})")
-                            else:
-                                st.markdown(f"🔗 **Link:** [{pin_link}]({pin_link})")
                 
                 # Show raw JSON response (collapsible)
                 with st.expander("📄 View Raw Response"):
