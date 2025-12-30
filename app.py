@@ -6,11 +6,12 @@ from PIL import Image
 import io
 from dotenv import load_dotenv
 import os
+import json
 
 # -----------------------------
 # LOAD ENV
 # -----------------------------
-load_dotenv()  # Load .env for local development
+load_dotenv()
 
 ENDPOINT_ID = os.getenv("RUNPOD_ENDPOINT_ID")
 API_KEY = os.getenv("RUNPOD_API_KEY")
@@ -32,21 +33,41 @@ HEADERS = {
 st.set_page_config(page_title="RunPod Pin Cutout", layout="centered")
 
 st.title("📌 RunPod Pin Cutout")
-st.caption("YOLO → BiRefNet → PNG Cutout")
+st.caption("YOLO → BiRefNet / SAM3 → CLIP Embedding")
 
 # -----------------------------
-# UI
+# UI (KEYS FIXED)
 # -----------------------------
 uploaded_file = st.file_uploader(
     "Upload pin image",
-    type=["png", "jpg", "jpeg", "webp"]
+    type=["png", "jpg", "jpeg", "webp"],
+    key="pin_image_uploader"
 )
 
-model = "birefnet"
+model = st.selectbox(
+    "Background removal model",
+    ["birefnet", "sam3"],
+    index=0,
+    key="bg_model"
+)
 
-enhance = st.checkbox("Enhance output", value=True)
+enhance = st.checkbox(
+    "Enhance output",
+    value=True,
+    key="enhance_output"
+)
 
-run_btn = st.button("🚀 Run Cutout", disabled=uploaded_file is None)
+show_embedding = st.checkbox(
+    "Show embedding preview",
+    value=False,
+    key="show_embedding"
+)
+
+run_btn = st.button(
+    "🚀 Run Cutout",
+    disabled=uploaded_file is None,
+    key="run_cutout"
+)
 
 # -----------------------------
 # RUN
@@ -55,6 +76,11 @@ if run_btn and uploaded_file is not None:
     with st.spinner("Encoding image..."):
         image_bytes = uploaded_file.read()
         image_b64 = base64.b64encode(image_bytes).decode()
+
+    # -----------------------------
+    # START TIMER (TOTAL RESPONSE TIME)
+    # -----------------------------
+    start_time = time.time()
 
     # Submit job
     with st.spinner("Submitting job to RunPod..."):
@@ -78,7 +104,9 @@ if run_btn and uploaded_file is not None:
     job_id = resp.json().get("id")
     st.success(f"Job submitted: `{job_id}`")
 
-    # Poll
+    # -----------------------------
+    # POLL JOB
+    # -----------------------------
     status_placeholder = st.empty()
     progress = st.progress(0)
     output = None
@@ -102,29 +130,76 @@ if run_btn and uploaded_file is not None:
             break
 
         if status == "FAILED":
-            st.error("Job failed")
+            st.error("❌ Job failed")
             st.json(data)
             st.stop()
 
+    # -----------------------------
+    # END TIMER
+    # -----------------------------
+    end_time = time.time()
+    total_time = round(end_time - start_time, 2)
+
     if output is None:
-        st.error("Timed out waiting for result")
+        st.error("⏱️ Timed out waiting for result")
         st.stop()
 
     if "error" in output:
         st.error(output["error"])
         st.stop()
 
-    # Decode output
+    # -----------------------------
+    # DISPLAY IMAGE
+    # -----------------------------
     result_bytes = base64.b64decode(output["image"])
     result_img = Image.open(io.BytesIO(result_bytes))
 
     st.success("✅ Cutout ready!")
 
-    st.image(result_img, caption=f"Model: {output.get('model_used')}")
-
-    st.download_button(
-        "⬇️ Download PNG",
-        data=result_bytes,
-        file_name="pin_cutout.png",
-        mime="image/png"
+    st.image(
+        result_img,
+        caption=(
+            f"Model: {output.get('model_used')} | "
+            f"Embedding: {output.get('embedding_model')}"
+        )
     )
+
+    # -----------------------------
+    # TOTAL TIME DISPLAY
+    # -----------------------------
+    st.info(f"⏱️ Total response time: **{total_time} seconds**")
+
+    # -----------------------------
+    # DOWNLOADS
+    # -----------------------------
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.download_button(
+            "⬇️ Download PNG",
+            data=result_bytes,
+            file_name="pin_cutout.png",
+            mime="image/png",
+            key="download_png"
+        )
+
+    with col2:
+        if "embedding" in output:
+            st.download_button(
+                "⬇️ Download Embedding (JSON)",
+                data=json.dumps({
+                    "embedding": output["embedding"],
+                    "model": output.get("embedding_model")
+                }),
+                file_name="pin_embedding.json",
+                mime="application/json",
+                key="download_embedding"
+            )
+
+    # -----------------------------
+    # OPTIONAL EMBEDDING PREVIEW
+    # -----------------------------
+    if show_embedding and "embedding" in output:
+        st.subheader("🔢 Embedding Preview")
+        st.caption(f"Vector length: {len(output['embedding'])}")
+        st.code(output["embedding"][:16], language="python")
