@@ -62,8 +62,8 @@ if search_btn and uploaded_file is not None:
                 # Display results
                 st.success("✅ Search completed!")
                 
-                # Show API link
-                st.info(f"🔗 **API Endpoint:** `{API_URL}`")
+                # # Show API link
+                # st.info(f"🔗 **API Endpoint:** `{API_URL}`")
                 
                 # Main result info
                 if result.get("match"):
