@@ -1,6 +1,6 @@
 import streamlit as st
 import requests
-from PIL import Image
+from PIL import Image, ImageOps
 import io
 import base64
 
@@ -37,6 +37,8 @@ search_btn = st.button(
 if search_btn and uploaded_file is not None:
     # Display uploaded image
     image = Image.open(uploaded_file)
+    # Apply EXIF orientation correction
+    image = ImageOps.exif_transpose(image)
     st.image(image, caption="Uploaded Image", use_container_width=True)
     
     # Prepare file for upload
@@ -119,6 +121,8 @@ if search_btn and uploaded_file is not None:
                         # Decode and display
                         cutout_bytes = base64.b64decode(cutout_b64)
                         cutout_img = Image.open(io.BytesIO(cutout_bytes))
+                        # Apply EXIF orientation correction
+                        cutout_img = ImageOps.exif_transpose(cutout_img)
                         st.subheader("🖼️ Cutout Image")
                         st.image(cutout_img, caption="Processed Cutout from API", use_container_width=True)
                         
@@ -143,8 +147,8 @@ if search_btn and uploaded_file is not None:
                     # Create a table for better visualization
                     debug_data = result["debug"]
                     
-                    # Display as expandable sections or table
-                    for idx, item in enumerate(debug_data, 1):
+                    # Display only top 3 similar pins
+                    for idx, item in enumerate(debug_data[:3], 1):
                         pin_id = item.get('pin_id')
                         similarity = item.get('similarity', 0)
                         pin_link = f"http://34.58.76.140:8000/pin/{pin_id}"
@@ -156,8 +160,11 @@ if search_btn and uploaded_file is not None:
                             with col2:
                                 st.metric("Distance", f"{item.get('distance', 0):.4f}")
                             
-                            # Show clickable link
-                            st.markdown(f"🔗 **Link:** [{pin_link}]({pin_link})")
+                            # Show image link if available, otherwise show regular link
+                            if item.get("image_link"):
+                                st.markdown(f"🔗 **Image Link:** [{item.get('image_link')}]({item.get('image_link')})")
+                            else:
+                                st.markdown(f"🔗 **Link:** [{pin_link}]({pin_link})")
                 
                 # Show raw JSON response (collapsible)
                 with st.expander("📄 View Raw Response"):
